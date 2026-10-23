@@ -1,0 +1,27 @@
+# Root-level build context .dockerignore - needed because
+# backend/Dockerfile builds from the repo root now (it needs to COPY in
+# two sibling directories, prompts/ and mcp-gateway/configs/, that live
+# outside backend/ itself - see backend/Dockerfile's own comment on why).
+# Without this, the entire monorepo (both services' node_modules, git
+# history, build artifacts) gets sent as build context on every build -
+# slow, and backend/Dockerfile's own `COPY backend/. .` would otherwise
+# copy a stale local node_modules/dist straight into the image, silently
+# overwriting what RUN npm ci/npm run build just correctly produced
+# inside the container - the exact bug class this file exists to prevent.
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+coverage
+**/coverage
+.git
+.env
+**/.env
+**/.env.local
+*.log
+**/*.log
+.DS_Store
+.ai
+.claude
