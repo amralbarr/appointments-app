@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/*
+ * Centralized Design System
+ * Navy / Cyan / Blue SaaS aesthetic with bilingual Arabic (RTL) & English (LTR) support.
+ */
+:root {
+  /* Buildron Navy Palette */
+  --buildron-navy: #06133f;
+  --buildron-navy-dark: #020b2a;
+  --buildron-navy-light: #eaf5ff;
+
+  /* Buildron Cyan Accent */
+  --buildron-cyan: #12b8d9;
+  --buildron-cyan-dark: #0a94b0;
+  --buildron-cyan-light: #e0faff;
+
+  /* Buildron Blue (Action) */
+  --buildron-blue: #1478e8;
+  --buildron-blue-dark: #0e5fc0;
+  --buildron-blue-light: #eaf5ff;
+
+  /* Canvas & Surfaces */
+  --background: #f8fafc;
+  --foreground: #0b1638;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+
+  /* Typography Colors */
+  --muted-foreground: #64748b;
+  --subtle-foreground: #94a3b8;
+
+  /* Borders & Dividers */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  /* Standard Semantic Tokens */
+  --primary: var(--buildron-blue);
+  --primary-hover: var(--buildron-blue-dark);
+  --primary-foreground: #ffffff;
+  --primary-subtle: var(--buildron-navy-light);
+
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-foreground: #ffffff;
+  --danger-subtle: #fef2f2;
+
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-subtle: #f0fdf4;
+
+  --warning-subtle: #fffbeb;
+  --warning-border: #fde68a;
+}
+
+@theme inline {
+  --color-buildron-navy: var(--buildron-navy);
+  --color-buildron-navy-dark: var(--buildron-navy-dark);
+  --color-buildron-navy-light: var(--buildron-navy-light);
+  --color-buildron-cyan: var(--buildron-cyan);
+  --color-buildron-cyan-dark: var(--buildron-cyan-dark);
+  --color-buildron-cyan-light: var(--buildron-cyan-light);
+  --color-buildron-blue: var(--buildron-blue);
+  --color-buildron-blue-dark: var(--buildron-blue-dark);
+  --color-buildron-blue-light: var(--buildron-blue-light);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-border: var(--warning-border);
+
+  --font-sans: "IBM Plex Sans Arabic", "Manrope", system-ui, -apple-system, sans-serif;
+  --font-arabic: "IBM Plex Sans Arabic", "Manrope", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  min-height: 100vh;
+}
+
+/* Subtle scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Background grid utility */
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(18, 184, 217, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 25px -5px rgba(18, 184, 217, 0.25);
+}
+
+.glow-blue {
+  box-shadow: 0 0 25px -5px rgba(20, 120, 232, 0.25);
+}
