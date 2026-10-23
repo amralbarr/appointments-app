@@ -1,0 +1,22 @@
+{
+  "ownerEmail": "dana@example.com",
+  "ownerName": "Dana",
+  "platformName": "Dana Family Clinic",
+  "platformNameAr": "عيادة دانا العائلية",
+  "slug": "dana-family-clinic",
+  "profile": {
+    "description": "A friendly neighborhood family clinic offering general consultations and follow-up visits for patients of all ages.",
+    "descriptionAr": "عيادة عائلية ودودة تقدم خدمات الكشف الطبي العام ومتابعة الحالات لجميع أفراد الأسرة بمختلف الأعمار، في بيئة مريحة وقريبة من المنزل.",
+    "address": "14 Olaya Street, Riyadh",
+    "phone": "+966 11 234 5678",
+    "businessHoursText": "Sun-Thu 9:00-17:00, closed Fridays and Saturdays",
+    "businessHoursTextAr": "الأحد - الخميس: 9:00 صباحًا - 5:00 مساءً، مغلق أيام الجمعة والسبت",
+    "workingDays": ["SUN", "MON", "TUE", "WED", "THU"],
+    "openTime": "09:00",
+    "closeTime": "17:00"
+  },
+  "services": [
+    { "name": "General consultation", "nameAr": "كشف عام", "durationMinutes": 30 },
+    { "name": "Follow-up", "nameAr": "متابعة", "durationMinutes": 15 }
+  ]
+}

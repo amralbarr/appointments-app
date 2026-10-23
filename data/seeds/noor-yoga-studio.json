@@ -1,0 +1,20 @@
+{
+  "ownerEmail": "closed@example.com",
+  "ownerName": "Noor",
+  "platformName": "Noor Yoga Studio",
+  "platformNameAr": "استوديو نور لليوغا",
+  "slug": "noor-yoga-studio",
+  "isActive": false,
+  "profile": {
+    "description": "Private yoga sessions and small group classes.",
+    "descriptionAr": "جلسات يوغا خاصة وحصص جماعية صغيرة.",
+    "address": "9 King Fahd Road, Riyadh",
+    "phone": "+966 11 987 6543",
+    "businessHoursText": "Currently suspended by platform admin.",
+    "businessHoursTextAr": "الاستوديو معلّق حاليًا من قِبل إدارة المنصة.",
+    "workingDays": [],
+    "openTime": null,
+    "closeTime": null
+  },
+  "services": []
+}

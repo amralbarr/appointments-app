@@ -1,0 +1,22 @@
+{
+  "ownerEmail": "layla@example.com",
+  "ownerName": "Layla",
+  "platformName": "Layla Hanafi Consulting",
+  "platformNameAr": "مكتب ليلى الحنفي للاستشارات",
+  "slug": "layla-hanafi-consulting",
+  "profile": {
+    "description": "Independent business and legal consulting - one-on-one sessions, by appointment only, in person or by video call.",
+    "descriptionAr": "استشارات مستقلة في مجالي الأعمال والقانون، تُقدَّم عبر جلسات فردية بموعد مسبق فقط، حضوريًا أو عن طريق مكالمة فيديو.",
+    "address": "Remote - video calls available",
+    "phone": "+966 50 123 4567",
+    "businessHoursText": "By appointment only, Sun-Thu",
+    "businessHoursTextAr": "بالموعد المسبق فقط، الأحد إلى الخميس",
+    "workingDays": ["SUN", "MON", "TUE", "WED", "THU"],
+    "openTime": null,
+    "closeTime": null
+  },
+  "services": [
+    { "name": "Consultation (30 min)", "nameAr": "استشارة (30 دقيقة)", "durationMinutes": 30 },
+    { "name": "Consultation (60 min)", "nameAr": "استشارة (60 دقيقة)", "durationMinutes": 60 }
+  ]
+}

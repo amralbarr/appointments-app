@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER // the existing, only role today — runs their own platform(s)
+  ADMIN // can create/suspend ANY platform, not just their own
+}
+
+// a real Postgres enum rather than free-text, matching this schema's
+// existing convention for every other fixed/closed value set
+// (UserRole/BookingStatus/ChatRole) — see qa-database-security-specialist's
+// review of this same change: a bare String[] gave the DB (and every
+// future writer) no enforcement that only real weekday codes ever land
+// in Platform.workingDays.
+enum WeekDay {
+  SUN
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String
+  name             String?
+  // hash of the current valid refresh token, if any — lets us rotate on
+  // every refresh and actually invalidate the previous one, rather than
+  // trusting a stateless jwt we can never revoke. null = logged out.
+  refreshTokenHash String?
+  role             UserRole @default(OWNER)
+  createdAt        DateTime @default(now())
+
+  platforms Platform[]
+  apiKeys   ApiKey[]
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  prefix     String
+  hashedKey  String
+  label      String?
+  scopes     String[]
+  // null = acts across every platform this user owns, same as every key
+  // issued before this column existed. set = restricted to exactly one.
+  platformId String?
+  // explicit onDelete: Restrict — makes written-schema intent match the
+  // ON DELETE RESTRICT hand-written into the applied phase2_core_schema
+  // migration (Prisma's implicit default for an optional relation is
+  // SetNull, which would silently promote a scoped key to an
+  // unrestricted one on a platform delete instead of blocking it — a
+  // real security-posture difference, not cosmetic). Previously left
+  // implicit, which caused `migrate dev --create-only` to keep
+  // regenerating an unrelated drop/re-add of this FK on every unrelated
+  // schema change (seen twice now); made explicit here to stop that.
+  platform   Platform? @relation(fields: [platformId], references: [id], onDelete: Restrict)
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([prefix])
+}
+
+model Platform {
+  id       String @id @default(uuid())
+  ownerId  String
+  owner    User   @relation(fields: [ownerId], references: [id])
+  name     String
+  slug     String @unique
+  timezone String @default("UTC")
+
+  // public profile content — enough for a real page a customer looks at,
+  // not just an api-shaped name/slug/timezone. all optional: a platform
+  // can exist before its owner fills any of this in.
+  description         String?
+  logoUrl             String?
+  coverImageUrl       String?
+  address             String?
+  phone               String?
+  businessHoursText   String?
+  // Arabic counterparts for the translatable content fields only — Arabic
+  // is the platform's default locale going forward. paired nullable
+  // columns, matching this schema's existing flat-field convention (no
+  // Json/locale-map precedent anywhere else in this schema); never
+  // required, so an existing row with no Arabic content yet stays valid,
+  // and never added to address/phone/logoUrl/coverImageUrl — those are
+  // factual/contact fields, not translatable content.
+  nameAr              String?
+  descriptionAr       String?
+  businessHoursTextAr String?
+  // structured working-time data, alongside the human-readable
+  // businessHoursText/businessHoursTextAr display strings above. a real
+  // WeekDay enum array rather than an Int bitmask or bare String[]:
+  // Postgres/Prisma support a native enum-array column directly, it's
+  // readable in a raw query or the Prisma Studio browser without decoding
+  // bits (unlike a bitmask), and — unlike a bare String[] — the DB itself
+  // rejects anything outside the real 7-value set, matching this schema's
+  // existing preference for enums over free-text on every other
+  // fixed/closed value set. openTime/closeTime are "HH:mm" strings, the
+  // same plain-String convention this schema already uses everywhere (no
+  // DateTime-without-date / native time precedent to diverge from).
+  // workingDays is required (NOT NULL, defaulted to []) since Prisma
+  // doesn't support a nullable scalar-list column on a relational
+  // provider; openTime/closeTime stay nullable: no per-day variation is
+  // modeled (every seeded tenant is one flat range + a closed-day set),
+  // and a platform with no fixed daily window (by-appointment-only) or no
+  // meaningful schedule at all (suspended) can leave openTime/closeTime
+  // null and workingDays empty rather than fabricate a schedule nobody
+  // provided. Informational/display-only for this pass — not wired into
+  // SlotsService.create()'s validation; see migration note for why.
+  workingDays         WeekDay[] @default([])
+  openTime            String?
+  closeTime           String?
+  // how many customers can hold the SAME time+service simultaneously -
+  // a barbershop with 3 chairs, a salon with multiple stylists, etc.
+  // Default 1 (the original, single-customer-per-slot behavior every
+  // existing platform keeps unless an owner explicitly raises it).
+  // Implemented by generating `seats` parallel Slot rows per time period
+  // (see SlotsService.ensureFutureSlots) rather than changing the
+  // one-booking-per-slot-ROW concurrency guarantee itself - the real,
+  // tested partial unique index (one_active_booking_per_slot) stays
+  // exactly as-is; "3 seats at 10:00" is 3 distinct Slot rows that
+  // happen to share the same startsAt/endsAt/serviceId, each still
+  // taking at most one CONFIRMED booking on its own.
+  seats               Int       @default(1)
+  // the admin suspension lever — a flag, never a delete. PlatformsService
+  // .getOwned() still finds a suspended platform for its own owner; every
+  // public read path filters it out. see ROLES-AND-DASHBOARDS.md.
+  isActive            Boolean   @default(true)
+  // customer self-service cancellation (via the AI chat or the standalone
+  // manage-booking page) is ON by default for every platform, old and
+  // new. Deliberately not named "cancellationEnabled" alone: this never
+  // gates an owner's own ability to cancel a booking from their dashboard
+  // (not built yet, but if it ever is, it has nothing to do with this
+  // flag) — only the customer-initiated paths. BookingsService.cancel()
+  // is the single enforcement point both paths share.
+  customerCancellationEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  services          Service[]
+  slots             Slot[]
+  apiKeys           ApiKey[]
+  bookings          Booking[]
+  chatConversations ChatConversation[]
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  platformId      String
+  platform        Platform @relation(fields: [platformId], references: [id])
+  name            String
+  // Arabic name — same paired-nullable-column pattern as Platform's new
+  // *Ar fields, for the same reason: no existing locale precedent to
+  // diverge from, and this stays safe/backward-compatible for a service
+  // that hasn't gotten Arabic content yet.
+  nameAr          String?
+  durationMinutes Int
+  createdAt       DateTime @default(now())
+
+  slots Slot[]
+}
+
+model Slot {
+  id         String   @id @default(uuid())
+  platformId String
+  platform   Platform @relation(fields: [platformId], references: [id])
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id])
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime @default(now())
+
+  bookings Booking[]
+
+  @@index([platformId, startsAt])
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  slotId          String
+  slot            Slot          @relation(fields: [slotId], references: [id])
+  // denormalized from slot.platformId at creation time — lets the second
+  // conflict guard (one_active_booking_per_customer) live directly on
+  // this table instead of joining through Slot every time it's checked.
+  platformId      String
+  platform        Platform      @relation(fields: [platformId], references: [id])
+  customerName    String
+  customerEmail   String
+  // sha256 of a random token handed back exactly once, in the create
+  // response — the real credential for cancelling/looking up this one
+  // booking. customerEmail used to double as this, but an email is
+  // guessable/often public, so it's a contact field now, not a secret.
+  cancelTokenHash String        @unique
+  status          BookingStatus @default(CONFIRMED)
+  createdAt       DateTime      @default(now())
+  cancelledAt     DateTime?
+
+  // the real constraints (both partial, CONFIRMED-only) are added by hand
+  // in the migration SQL — see migrations/.../migration.sql and
+  // docs/CONCURRENCY.md. these plain @@index entries just keep lookups
+  // fast; they are NOT what prevents double booking.
+  @@index([slotId])
+  @@index([platformId, customerEmail])
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  TOOL
+}
+
+// the ai assistant's conversation history — keyed by (platform, customer
+// email), not a session id, so a returning customer typing the same email
+// continues the same thread. see AI-BOOKING-ASSISTANT.md.
+model ChatConversation {
+  id            String   @id @default(uuid())
+  platformId    String
+  platform      Platform @relation(fields: [platformId], references: [id])
+  customerEmail String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([platformId, customerEmail])
+}
+
+model ChatMessage {
+  id             String           @id @default(uuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id])
+  role           ChatRole
+  content        String
+  // present only on a TOOL-role row: which tool ran and what it returned —
+  // lets a platform owner see what the assistant actually did, not just
+  // what it said.
+  toolName       String?
+  toolResult     Json?
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+}

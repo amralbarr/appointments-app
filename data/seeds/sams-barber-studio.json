@@ -1,0 +1,24 @@
+{
+  "ownerEmail": "sam@example.com",
+  "ownerName": "Sam",
+  "platformName": "Sam's Barber Studio",
+  "platformNameAr": "صالون سام للحلاقة",
+  "slug": "sams-barber-studio",
+  "seats": 3,
+  "profile": {
+    "description": "A classic barbershop for haircuts, beard trims, and color - walk-ins welcome, but booking ahead means no waiting around.",
+    "descriptionAr": "صالون حلاقة كلاسيكي يقدم خدمات قص الشعر وتهذيب اللحية والصبغة، نرحب بالزيارات المباشرة، لكن الحجز المسبق يوفر عليك الانتظار.",
+    "address": "22 Tahlia Street, Jeddah",
+    "phone": "+966 12 345 6789",
+    "businessHoursText": "Sat-Thu 10:00-20:00, closed Fridays",
+    "businessHoursTextAr": "السبت - الخميس: 10:00 صباحًا - 8:00 مساءً، مغلق يوم الجمعة",
+    "workingDays": ["SAT", "SUN", "MON", "TUE", "WED", "THU"],
+    "openTime": "10:00",
+    "closeTime": "20:00"
+  },
+  "services": [
+    { "name": "Haircut", "nameAr": "قص شعر", "durationMinutes": 20 },
+    { "name": "Beard trim", "nameAr": "تهذيب اللحية", "durationMinutes": 10 },
+    { "name": "Coloring", "nameAr": "صبغة شعر", "durationMinutes": 45 }
+  ]
+}
