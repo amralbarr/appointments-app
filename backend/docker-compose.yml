@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-slotbook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-slotbook}
+      POSTGRES_DB: ${POSTGRES_DB:-slotbook}
+    ports:
+      - "6412:5432"
+    volumes:
+      - slotbook_pg_data:/var/lib/postgresql/data
+
+volumes:
+  slotbook_pg_data:
