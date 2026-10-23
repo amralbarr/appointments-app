@@ -1,0 +1,105 @@
+# this app's entire integration surface with the shared mcp-gateway - no
+# bespoke mcp server code, just a declarative tool list. see
+# docs/MCP-INTEGRATION.md for the why.
+#
+# "id" is managed by push.sh/pull.sh/register.sh - always forced to match
+# this file's own name (appointments.yaml -> id "appointments"), never
+# edited by hand.
+id: appointments
+name: "Slotbook"
+# host.docker.internal, not localhost - the gateway runs in its own
+# container and needs this to reach a service running directly on the
+# host. This isn't just a local-dev placeholder: it's the real production
+# pattern too, since this backend runs under PM2 (ecosystem.config.js),
+# not Docker, on the same host as the gateway - the gateway's own
+# docker-compose.yml sets up `extra_hosts: host.docker.internal:host-gateway`
+# specifically so this resolves on Linux prod the same way it does on
+# Docker Desktop locally. Port 6410 matches this backend's own PORT
+# (see ../backend/.env) - keep both in sync if that ever changes.
+baseUrl: "http://host.docker.internal:6410/api/v1"
+
+auth:
+  strategy: apiKeyVerify
+  keyPrefix: "sk_live_"
+  verifyUrl: "http://host.docker.internal:6410/api/v1/auth/mcp/verify"
+  verifyHeaderName: x-internal-secret
+  verifySecretEnv: APPOINTMENTS_MCP_INTERNAL_SECRET
+  forwardTokenField: accessToken
+  scopesField: scopes
+
+# registered public, same reasoning as every apiKeyVerify platform: this
+# strategy already resolves the caller to a real backend-checked identity
+# and scope set on every call, so a second gateway-level credential on
+# top of that gates nothing extra. see README.md, "Visibility".
+
+tools:
+  - name: list_platforms
+    description: "List platforms owned by the authenticated user."
+    method: GET
+    path: /platforms
+    scope: platforms:read
+    schema: {}
+
+  - name: get_platform
+    description: "Get one platform by id."
+    method: GET
+    path: "/platforms/{id}"
+    scope: platforms:read
+    schema:
+      id: { type: string, description: "Platform id" }
+
+  - name: list_services
+    description: "List services offered by a platform."
+    method: GET
+    path: "/platforms/{platformId}/services"
+    scope: platforms:read
+    schema:
+      platformId: { type: string }
+
+  - name: list_slots
+    description: "List slots for a platform, optionally filtered. onlyOpen defaults to true."
+    method: GET
+    path: "/platforms/{platformId}/slots"
+    queryParams: [serviceId, from, to, onlyOpen]
+    scope: platforms:read
+    schema:
+      platformId: { type: string }
+      serviceId:  { type: string, optional: true }
+      from:       { type: string, optional: true, description: "ISO date, inclusive lower bound" }
+      to:         { type: string, optional: true, description: "ISO date, exclusive upper bound" }
+      onlyOpen:   { type: boolean, optional: true, default: true }
+
+  - name: create_booking
+    description: "Book an open slot. Fails with a clear conflict error if someone else just took it - that's expected behavior under a race, not a bug to retry blindly. The response includes cancelToken - shown exactly once, needed to cancel or look up this booking later. Pass that token straight back to whoever is asking for the booking, don't lose it."
+    method: POST
+    path: "/platforms/{platformId}/slots/{slotId}/bookings"
+    scope: bookings:write
+    schema:
+      platformId:    { type: string }
+      slotId:        { type: string }
+      customerName:  { type: string }
+      customerEmail: { type: string }
+
+  - name: cancel_booking
+    description: "Cancel a booking, freeing its slot for someone else. Needs the cancelToken from the original create_booking response - not the customer's email, which was never actually a secret. bookingId is needed to build this gateway's own URL (an owner's own agent already has it from elsewhere in its own tool set); the in-process customer-facing AI chat path (chat.service.ts/tool-executor.ts) never has a bookingId to give the model and resolves by cancelToken alone instead (BookingsService.findIdByCancelToken) - this schema's bookingId is optional for that reason, not because the gateway itself can skip it. (Deliberately not naming the other owner-only tool here - mcp-tool-schema.spec.ts asserts no owner-only tool name ever leaks into the customer-facing prompt this description feeds.)"
+    method: DELETE
+    path: "/bookings/{bookingId}"
+    # DELETE never carries a body through this gateway (only POST/PATCH
+    # do - see the engine's create-tool.ts), so cancelToken has to be a
+    # query param here, matching how the backend's own DELETE endpoint
+    # actually reads it.
+    queryParams: [cancelToken]
+    scope: bookings:write
+    schema:
+      bookingId:    { type: string, optional: true, description: "Required to actually call this gateway tool (builds the URL) - an owner's own agent already has it from elsewhere in its own tool set. The customer-facing AI chat path never supplies this; it resolves the booking by cancelToken alone instead." }
+      cancelToken:  { type: string, description: "From the original create_booking response" }
+
+  - name: list_bookings
+    description: "List booking history for a platform the caller owns. Includes customer name/email - see docs/MCP-INTEGRATION.md's note on PII exposure before pointing this at an assistant you don't fully control."
+    method: GET
+    path: "/platforms/{platformId}/bookings"
+    queryParams: [status]
+    scope: bookings:read
+    schema:
+      platformId: { type: string }
+      status:     { type: enum, values: [CONFIRMED, CANCELLED], optional: true }
